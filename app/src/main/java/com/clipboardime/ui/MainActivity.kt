@@ -1,18 +1,28 @@
 package com.clipboardime.ui
 
+import android.Manifest
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.View
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.clipboardime.ClipboardService
 import com.clipboardime.R
 import com.clipboardime.data.ClipboardDatabase
 import com.clipboardime.data.ClipboardEntity
 import com.clipboardime.data.ClipboardRepository
 import com.clipboardime.util.ClipboardMonitor
+import com.google.android.material.materialswitch.MaterialSwitch
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -22,7 +32,12 @@ class MainActivity : AppCompatActivity() {
     private lateinit var repository: ClipboardRepository
     private lateinit var monitor: ClipboardMonitor
     private lateinit var adapter: ClipboardAdapter
+    private lateinit var switchMonitor: MaterialSwitch
     private var searchJob: Job? = null
+
+    private val notificationPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { /* proceed regardless */ }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -35,8 +50,9 @@ class MainActivity : AppCompatActivity() {
         setupRecyclerView()
         setupSearch()
         setupFab()
+        setupMonitorSwitch()
 
-        // Register clipboard listener
+        // Register clipboard listener for in-app use
         val cm = getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager
         cm.addPrimaryClipChangedListener(monitor)
 
@@ -50,12 +66,50 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         monitor.captureCurrentClipboard()
+        switchMonitor.isChecked = ClipboardService.isRunning(this)
     }
 
     override fun onDestroy() {
         val cm = getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager
         cm.removePrimaryClipChangedListener(monitor)
         super.onDestroy()
+    }
+
+    private fun setupMonitorSwitch() {
+        switchMonitor = findViewById(R.id.sw_monitor)
+        switchMonitor.isChecked = ClipboardService.isRunning(this)
+
+        switchMonitor.setOnCheckedChangeListener { _, isChecked ->
+            if (isChecked) {
+                startMonitorService()
+            } else {
+                stopMonitorService()
+            }
+        }
+    }
+
+    private fun startMonitorService() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+                != PackageManager.PERMISSION_GRANTED
+            ) {
+                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+
+        val intent = Intent(this, ClipboardService::class.java)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(intent)
+        } else {
+            startService(intent)
+        }
+        Toast.makeText(this, "已开启自动监听，每次复制都会自动保存", Toast.LENGTH_SHORT).show()
+    }
+
+    private fun stopMonitorService() {
+        val intent = Intent(this, ClipboardService::class.java)
+        stopService(intent)
+        Toast.makeText(this, "已关闭自动监听", Toast.LENGTH_SHORT).show()
     }
 
     private fun setupRecyclerView() {
