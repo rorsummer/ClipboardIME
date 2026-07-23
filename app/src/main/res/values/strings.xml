@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">剪贴板搜索输入法</string>
+    <string name="ime_name">ClipboardIME</string>
+    <string name="search_hint">输入关键字搜索剪贴板…</string>
+    <string name="clear_history">清空历史记录</string>
+    <string name="no_results">无匹配记录</string>
+    <string name="enable_ime_title">启用输入法</string>
+    <string name="enable_ime_desc">请在系统设置中启用 ClipboardIME 输入法</string>
+    <string name="open_settings">打开输入法设置</string>
+    <string name="clipboard_history">剪贴板历史</string>
+    <string name="history_count">共 %d 条记录</string>
+    <string name="clear_confirm">确定清空所有剪贴板历史记录？</string>
+    <string name="clear_all">全部清空</string>
+    <string name="search_key">搜索</string>
+    <string name="back_key">返回</string>
+    <string name="space_key">空格</string>
+    <string name="delete_key">删除</string>
+</resources>
