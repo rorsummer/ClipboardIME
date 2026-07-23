@@ -36,13 +36,15 @@ class MainActivity : AppCompatActivity() {
         setupSearch()
         setupFab()
 
-        // Register clipboard listener and capture current clipboard
+        // Register clipboard listener
         val cm = getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager
         cm.addPrimaryClipChangedListener(monitor)
-        monitor.captureCurrentClipboard()
 
-        // Show all items initially
-        observeClipboard()
+        // Capture existing clipboard first, then observe
+        lifecycleScope.launch {
+            monitor.captureAndAwait()
+            observeClipboard()
+        }
     }
 
     override fun onResume() {
@@ -81,10 +83,10 @@ class MainActivity : AppCompatActivity() {
         findViewById<com.google.android.material.floatingactionbutton.FloatingActionButton>(
             R.id.fab_capture
         ).setOnClickListener {
-            monitor.captureCurrentClipboard()
-            Toast.makeText(this, "已保存当前剪贴板内容", Toast.LENGTH_SHORT).show()
-            // Refresh the list
-            observeClipboard()
+            lifecycleScope.launch {
+                monitor.captureAndAwait()
+                Toast.makeText(this@MainActivity, "已保存当前剪贴板内容", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 

@@ -14,19 +14,28 @@ class ClipboardMonitor(
 
     private val scope = CoroutineScope(Dispatchers.IO)
 
+    private fun getClipboardText(): String? {
+        val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager ?: return null
+        val clip = cm.primaryClip ?: return null
+        if (clip.itemCount == 0) return null
+        return clip.getItemAt(0).coerceToText(context).toString().takeIf { it.isNotBlank() }
+    }
+
     override fun onPrimaryClipChanged() {
         captureCurrentClipboard()
     }
 
     fun captureCurrentClipboard() {
-        val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager ?: return
-        val clip = cm.primaryClip ?: return
-        if (clip.itemCount == 0) return
-        val text = clip.getItemAt(0).coerceToText(context).toString()
-        if (text.isBlank()) return
+        val text = getClipboardText() ?: return
         scope.launch {
             repository.addClipboardEntry(text)
         }
+    }
+
+    suspend fun captureAndAwait(): String? {
+        val text = getClipboardText() ?: return null
+        repository.addClipboardEntry(text)
+        return text
     }
 
     fun copyToClipboard(text: String) {
